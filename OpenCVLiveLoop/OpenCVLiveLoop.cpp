@@ -32,6 +32,10 @@ VideoCapture initCam(const int index) {
 	return cap;
 }
 
+Mat genKernel(int size) {
+	return getStructuringElement(MORPH_ELLIPSE, Size(size, size));
+}
+
 
 int StereoLoop()
 {
@@ -46,9 +50,11 @@ int StereoLoop()
 	bool capturingBackground = true;
 	double dist = 0.0;
 	int distThreshhold = 900;
+	int kernelSize = 9;
   
 	bool exiting = false;
-	Mat erodeDiluteKernel = Mat::ones(5, 5, CV_8UC1);
+	//Mat erodeDiluteKernel = Mat::ones(9, 9, CV_8UC1);
+	Mat erodeDiluteKernel = getStructuringElement(MORPH_ELLIPSE, Size(9, 9));
 
 	vector<Mat> channels;
 	Mat diffSum;
@@ -100,8 +106,9 @@ int StereoLoop()
 		}
 
 		// Binärbild putzen
-		dilate(mask, diffImage, erodeDiluteKernel);
-		erode(diffImage, mask, erodeDiluteKernel);
+		Mat kernel = genKernel(kernelSize + 1);
+		dilate(mask, diffImage, kernel);
+		erode(diffImage, mask, kernel);
 
 		// inputFrame2 und inputFrame1 mit diffImage als Maske zusammenbauen
 		inputFrame2.copyTo(resultFrame);
@@ -123,10 +130,13 @@ int StereoLoop()
 			break;
 		}
 		case 32: {
-			destroyWindow("Vorschau");
-			namedWindow("Differenz Bild", CV_WINDOW_AUTOSIZE);
-			createTrackbar("diffThreshold", "Differenz Bild", &distThreshhold, 18000);
-			capturingBackground = false;
+			if (capturingBackground) {
+				destroyWindow("Vorschau");
+				namedWindow("Differenz Bild", CV_WINDOW_AUTOSIZE);
+				createTrackbar("diffThreshold", "Differenz Bild", &distThreshhold, 18000);
+				createTrackbar("diffKernel", "Differenz Bild", &kernelSize, 19);
+			}
+			capturingBackground = !capturingBackground;
 			break;
 		}
 	
